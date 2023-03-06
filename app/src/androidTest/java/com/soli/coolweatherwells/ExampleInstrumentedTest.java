@@ -10,6 +10,12 @@ import org.junit.runner.RunWith;
 
 import static org.junit.Assert.*;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.net.URLConnection;
+
 /**
  * Instrumented test, which will execute on an Android device.
  *
