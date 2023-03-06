@@ -2,8 +2,11 @@ package com.soli.coolweatherwells;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.GravityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.os.Build;
@@ -22,6 +25,7 @@ import android.widget.Toast;
 import com.bumptech.glide.Glide;
 import com.soli.coolweatherwells.gson.Forecast;
 import com.soli.coolweatherwells.gson.Weather;
+import com.soli.coolweatherwells.service.AutoUpdateService;
 import com.soli.coolweatherwells.util.HttpUtil;
 import com.soli.coolweatherwells.util.Utility;
 
@@ -38,8 +42,8 @@ import okhttp3.Response;
 
 public class WeatherActivity extends AppCompatActivity {
     public DrawerLayout drawerLayout;
-    private ScrollView weatherLayout;
     private Button navButton;
+    private ScrollView weatherLayout;
     private TextView titleCity;
     private TextView titleUpdateTime;
     private TextView degreeText;
@@ -52,6 +56,7 @@ public class WeatherActivity extends AppCompatActivity {
     private TextView sportText;
     private ImageView bingPicImg;
     private String mWeatherId;
+    SwipeRefreshLayout swipeRefresh;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -78,6 +83,12 @@ public class WeatherActivity extends AppCompatActivity {
         carWashText = (TextView) findViewById(R.id.car_wash_text);
         sportText = (TextView) findViewById(R.id.sport_text);
         bingPicImg = (ImageView)findViewById(R.id.bing_pic_img);
+        swipeRefresh = (SwipeRefreshLayout) findViewById(R.id.swipe_refresh);
+
+        drawerLayout = (DrawerLayout) findViewById(R.id.drawer_layour);
+        navButton = (Button) findViewById(R.id.nav_button);
+
+        swipeRefresh.setColorSchemeResources(com.google.android.material.R.color.design_default_color_on_primary);
 
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         String weatherString = prefs.getString("weather", null);
@@ -94,7 +105,20 @@ public class WeatherActivity extends AppCompatActivity {
             requestWeather(mWeatherId);
         }
 
+        swipeRefresh.setOnRefreshListener(new SwipeRefreshLayout.OnRefreshListener() {
+            @Override
+            public void onRefresh() {
+                requestWeather(mWeatherId);
+            }
+        });
         loadBingPic();
+
+        navButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                drawerLayout.openDrawer(GravityCompat.START);
+            }
+        });
 
     }
 
@@ -162,6 +186,9 @@ public class WeatherActivity extends AppCompatActivity {
         carWashText.setText(carWash);
         sportText.setText(sport);
         weatherLayout.setVisibility(View.VISIBLE);
+
+        Intent intent = new Intent(this, AutoUpdateService.class);
+        startService(intent);
     }
 
     /**
@@ -183,7 +210,11 @@ public class WeatherActivity extends AppCompatActivity {
                             SharedPreferences.Editor editor = PreferenceManager.getDefaultSharedPreferences(WeatherActivity.this).edit();
                             editor.putString("weather", responseText);
                             editor.apply();
+
+                            mWeatherId = weather.basic.weatherId;
+
                             showWeatherInfo(weather);
+                            swipeRefresh.setRefreshing(false);
                         } else {
                             Toast.makeText(WeatherActivity.this, "获取天气信息失败", Toast.LENGTH_SHORT).show();
                         }
@@ -198,6 +229,7 @@ public class WeatherActivity extends AppCompatActivity {
                     @Override
                     public void run() {
                         Toast.makeText(WeatherActivity.this, "获取天气信息失败", Toast.LENGTH_SHORT).show();
+                        swipeRefresh.setRefreshing(false);
                     }
                 });
             }
